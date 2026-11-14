@@ -75,10 +75,13 @@ const P = {
   box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>',
   moon: '<path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/>',
-  spark: '<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',
-  heart: '<path d="M12 21s-7-4.6-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6C19 16.4 12 21 12 21z"/>',
+  spark:
+    '<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',
+  heart:
+    '<path d="M12 21s-7-4.6-9.5-9A5.5 5.5 0 0112 6a5.5 5.5 0 019.5 6C19 16.4 12 21 12 21z"/>',
   wa: '<path d="M21 12a8.5 8.5 0 01-12.6 7.4L3 21l1.7-5.2A8.5 8.5 0 1121 12z"/><path d="M9 8.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-.8.8a3.5 3.5 0 01-1.9-1.9l.8-.8-1-2z"/>',
-  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>',
+  phone:
+    '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z"/>',
 };
 const ic = (n) =>
   `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n]}</svg>`;
@@ -214,7 +217,9 @@ let FRESH = true;
 document.addEventListener(
   "pointermove",
   (e) => {
-    const el = e.target.closest && e.target.closest(".pc,.st,.mk,.tp,.card,.ty button,.hero");
+    const el =
+      e.target.closest &&
+      e.target.closest(".pc,.st,.mk,.tp,.card,.ty button,.hero");
     if (!el) return;
     const r = el.getBoundingClientRect();
     el.style.setProperty("--mx", e.clientX - r.left + "px");
@@ -237,6 +242,12 @@ document.addEventListener("pointerdown", (e) => {
 /* ===== الاتصال بقاعدة البيانات (Supabase) ===== */
 const SB_URL = "https://ijrnqqnxhrowxzubdfhw.supabase.co";
 const SB_KEY = "sb_publishable_D9R-iqAwkQd19eSNdNB7ZA_GsZ0W7UB"; // مفتاح عام: آمن في الواجهة. لا تضع هنا أي مفتاح سري أبدا.
+const SBC = supabase.createClient(SB_URL, SB_KEY, {
+  auth: { storageKey: "aswaq-customer-auth" },
+});
+// الحساب يُنشأ برقم الجوال؛ الإيميل الحقيقي اختياري ويُحفظ في profiles فقط
+const PMAIL = (ph) => "aswaq." + ph + "@gmail.com";
+let RT = null;
 let CAT = "loading",
   CAT_ERR = "";
 async function sbGet(path) {
@@ -279,7 +290,7 @@ async function loadCatalog() {
           ts: Date.parse(s.created_at) || 0,
         };
       })
-      .concat(ls);
+      .concat(ls.filter((x) => !x.uuid || !st.some((s) => s.id == x.uuid)));
     S.ps = pr
       .filter((p) => sid[p.store_id] != null)
       .map((p) => ({
@@ -292,14 +303,26 @@ async function loadCatalog() {
         img: /^https:\/\//.test(p.image_thumb || "") ? p.image_thumb : "",
         ts: Date.parse(p.created_at) || 0,
       }))
-      .concat(lp);
+      .concat(lp.filter((x) => !x.uuid || !pr.some((p) => p.id == x.uuid)));
     S.cart = S.cart.filter((c) => S.ps.some((p) => p.id == c.id));
     CAT = "ok";
   } catch (e) {
     CAT = "error";
     CAT_ERR = String((e && e.message) || e);
   }
-  if (["home", "markets", "stores", "types", "bytype", "product", "cart", "pay", "search"].includes(S.view)) {
+  if (
+    [
+      "home",
+      "markets",
+      "stores",
+      "types",
+      "bytype",
+      "product",
+      "cart",
+      "pay",
+      "search",
+    ].includes(S.view)
+  ) {
     FRESH = true;
     render();
   }
@@ -311,7 +334,16 @@ const emp = (msg) =>
       ? `<div class="em">تعذّر الاتصال بالخادم (${E(CAT_ERR)})<button class="b" onclick="loadCatalog()">إعادة المحاولة</button></div>`
       : `<div class="em">${msg}</div>`;
 
-const sq0 = () => ({ m: "p", q: "", so: "new", mk: "", ty: "", mn: "", mx: "", of: false });
+const sq0 = () => ({
+  m: "p",
+  q: "",
+  so: "new",
+  mk: "",
+  ty: "",
+  mn: "",
+  mx: "",
+  of: false,
+});
 let IMG = "",
   LOC = "",
   PM = "",
@@ -360,8 +392,21 @@ const pic = (o, c) =>
   `<div class="pic ${c || ""}" style="background:hsl(${(o.id * 47) % 360} 45% 50%/.18)">${o.img ? `<img src="${E(o.img)}" alt="" onerror="this.remove()">` : ""}</div>`;
 const uid = () => S.user.aid || S.user.ph || "g";
 const liked = (id) => S.role != "guest" && (S.lk[id] || []).includes(uid());
-const BW = ["", "مرة واحدة", "مرتين", "ثلاث مرات", "أربع مرات", "خمس مرات", "ست مرات", "سبع مرات", "ثماني مرات", "تسع مرات", "عشر مرات"];
-const bt = (n) => (n < 1 ? "لم يُشترَ بعد" : "تم الشراء " + (n <= 10 ? BW[n] : n + " مرة"));
+const BW = [
+  "",
+  "مرة واحدة",
+  "مرتين",
+  "ثلاث مرات",
+  "أربع مرات",
+  "خمس مرات",
+  "ست مرات",
+  "سبع مرات",
+  "ثماني مرات",
+  "تسع مرات",
+  "عشر مرات",
+];
+const bt = (n) =>
+  n < 1 ? "لم يُشترَ بعد" : "تم الشراء " + (n <= 10 ? BW[n] : n + " مرة");
 function go(v, a, keep) {
   if (v == "search" && S.view != "search") SQ = sq0();
   S.view = v;
@@ -384,7 +429,9 @@ function dr(o) {
   if (o) {
     const g = S.role == "guest";
     $("#pn").innerHTML =
-      '<div class="dh dlogo"><div class="logo">' + ($("header .logo svg") ? $("header .logo").innerHTML : "أسواق") + "</div></div>" +
+      '<div class="dh dlogo"><div class="logo">' +
+      ($("header .logo svg") ? $("header .logo").innerHTML : "أسواق") +
+      "</div></div>" +
       [
         [g ? "تسجيل دخول" : "حسابي", g ? "login" : "acct"],
         ["الأسواق", "markets"],
@@ -445,6 +492,8 @@ function loc() {
     : T("المتصفح لا يدعم تحديد الموقع");
 }
 function sub(k) {
+  if (k == "c") return subC();
+  if (k == "s") return subS();
   const nm = g("nm"),
     ph = g("ph");
   if (!nm) return T("اكتب الاسم الشخصي");
@@ -486,7 +535,17 @@ function sub(k) {
     };
     S.role = "store";
   } else {
-    S.user = { k, aid, pw, nm, ph, em: g("em"), dr: DR[g("drs")], st: g("st"), loc: LOC };
+    S.user = {
+      k,
+      aid,
+      pw,
+      nm,
+      ph,
+      em: g("em"),
+      dr: DR[g("drs")],
+      st: g("st"),
+      loc: LOC,
+    };
     S.role = "customer";
   }
   S.accs.push({ ...S.user });
@@ -495,6 +554,7 @@ function sub(k) {
 }
 /* تسجيل الدخول بحساب سابق: الرقم + كلمة المرور فقط، ثم تظهر صفحة حسابه */
 function signin(k) {
+  if (k == "c" || k == "s") return signinC();
   const ph = g("ph"),
     pw = g("pw");
   if (!/^7\d{8}$/.test(ph)) return T("الرقم من 9 أرقام ويبدأ بـ 7");
@@ -511,20 +571,28 @@ const rm = (m) => {
   RM = m;
   render();
 };
-function addp() {
+async function addp() {
   const n = g("pnm"),
-    p = +g("pp");
+    p = +g("pp"),
+    d = g("pd");
   if (!n) return T("اكتب اسم المنتج");
   if (!(p > 0)) return T("اكتب سعرا صحيحا");
-  S.ps.unshift({
-    id: Date.now(),
-    n,
-    d: g("pd"),
-    s: S.user.sid,
-    p,
-    img: IMG,
-    local: true,
-  });
+  const lp = { id: Date.now(), n, d, s: S.user.sid, p, img: IMG, local: true };
+  S.ps.unshift(lp);
+  if (S.user.suuid) {
+    const { data, error } = await SBC.from("products")
+      .insert({
+        store_id: S.user.suuid,
+        name: n,
+        description: d,
+        price: p,
+        in_stock: true,
+      })
+      .select()
+      .single();
+    if (error) T("حُفظ على جهازك فقط: " + error.message);
+    else lp.uuid = data.id;
+  }
   T("تمت إضافة المنتج");
   go("mine");
 }
@@ -720,7 +788,9 @@ async function shs() {
   try {
     if (IMG && navigator.canShare) {
       const b = await (await fetch(IMG)).blob(),
-        f = new File([b], "shein-product.jpg", { type: b.type || "image/jpeg" });
+        f = new File([b], "shein-product.jpg", {
+          type: b.type || "image/jpeg",
+        });
       if (navigator.canShare({ files: [f] })) {
         await navigator.share({ files: [f], text: txt });
         return;
@@ -729,7 +799,11 @@ async function shs() {
   } catch (e) {
     if (e && e.name == "AbortError") return;
   }
-  window.open("https://wa.me/" + OWNER + "?text=" + encodeURIComponent(txt), "_blank", "noopener");
+  window.open(
+    "https://wa.me/" + OWNER + "?text=" + encodeURIComponent(txt),
+    "_blank",
+    "noopener",
+  );
 }
 
 /* ===== صفحة البحث والفلترة ===== */
@@ -765,8 +839,14 @@ function sr() {
       : emp("لا توجد منتجات مطابقة.");
     h = `<p class="mu" style="margin:0 0 10px">${l.length} منتج</p>` + h;
   } else {
-    const l = S.ss.filter((s) => (!q || (s.n + s.d + s.t).includes(q)) && okS(s));
-    l.sort(Q.so == "old" ? (a, b) => (a.ts || a.id) - (b.ts || b.id) : (a, b) => (b.ts || b.id) - (a.ts || a.id));
+    const l = S.ss.filter(
+      (s) => (!q || (s.n + s.d + s.t).includes(q)) && okS(s),
+    );
+    l.sort(
+      Q.so == "old"
+        ? (a, b) => (a.ts || a.id) - (b.ts || b.id)
+        : (a, b) => (b.ts || b.id) - (a.ts || a.id),
+    );
     h = l.length ? l.map((s) => stc(s)).join("") : emp("لا توجد متاجر مطابقة.");
     h = `<p class="mu" style="margin:0 0 10px">${l.length} متجر</p>` + h;
   }
@@ -788,6 +868,12 @@ const wa = () =>
   `<a class="wa" target="_blank" rel="noopener" href="https://wa.me/${WA}">${ic("chat")}<span>راسل المالك عبر واتساب</span></a>`;
 function out() {
   save();
+  SBC.auth.signOut();
+  if (RT) {
+    SBC.removeChannel(RT);
+    RT = null;
+  }
+  S.msgs = [];
   S.role = "guest";
   S.user = {};
   T("تم تسجيل الخروج");
@@ -797,7 +883,10 @@ const V = {
   home(a) {
     const q = S.q.trim();
     let l = S.ps.filter(
-      (p) => !p.h && (!a || p.s == a) && (!q || (p.n + p.d + sto(p.s).n).includes(q)),
+      (p) =>
+        !p.h &&
+        (!a || p.s == a) &&
+        (!q || (p.n + p.d + sto(p.s).n).includes(q)),
     );
     const hero =
       a || q
@@ -857,7 +946,8 @@ const V = {
   },
   product(id) {
     const p = S.ps.find((x) => x.id == id);
-    if (!p || (p.h && !(S.role == "store" && p.s == S.user.sid))) return '<div class="em">هذا المنتج لم يعد متوفرا.</div>';
+    if (!p || (p.h && !(S.role == "store" && p.s == S.user.sid)))
+      return '<div class="em">هذا المنتج لم يعد متوفرا.</div>';
     const rs = S.rt[id] || {},
       vs = Object.values(rs),
       n = vs.length,
@@ -877,7 +967,8 @@ const V = {
         `<h2>سلتي</h2>${tabs}` +
         (l.length
           ? `<div class="grid">${l.map((p) => card(p)).join("")}</div>`
-          : '<div class="em">لا توجد منتجات في المفضلة بعد. اضغط على القلب في أي منتج لإضافته.</div>') + wishAl(l)
+          : '<div class="em">لا توجد منتجات في المفضلة بعد. اضغط على القلب في أي منتج لإضافته.</div>') +
+        wishAl(l)
       );
     }
     const it = S.cart
@@ -905,14 +996,14 @@ const V = {
   reg(k) {
     const A = F("nm", "الاسم الشخصي"),
       B = F("ph", "الرقم", { t: "tel" }),
-      C = F("em", "الإيميل", { n: 1, t: "email" }),
+      C = F("em", "الإيميل", { t: "email", n: 1 }),
       W = F("pw", "كلمة المرور", { t: "password" });
     if (k == "d")
       return `<h2>حساب عامل توصيل</h2><div class="card">${A}${B}<button class="b" onclick="sub('d')">حفظ</button></div>`;
     const ttl = k == "s" ? "حساب محل تجاري" : "حساب زبون",
       tabs = `<div class="seg"><button class="op ${RM == "n" ? "on" : ""}" onclick="rm('n')">تسجيل بحساب جديد</button><button class="op ${RM == "o" ? "on" : ""}" onclick="rm('o')">لدي حساب من قبل</button></div>`;
     if (RM == "o")
-      return `<h2>${ttl}</h2><div class="card">${tabs}${B}${W}<button class="b" onclick="signin('${k}')">دخول</button></div>`;
+      return `<h2>${ttl}</h2><div class="card">${tabs}${F("em", "رقم الجوال أو الإيميل")}${W}<button class="b" onclick="signin('${k}')">دخول</button></div>`;
     if (k == "s")
       return `<h2>${ttl}</h2><div class="card">${tabs}${A}${F("sn", "اسم المحل التجاري")}${B}${C}${W}${F("ty", "نوع المتجر", { o: TY })}${F("drs", "موقع المحل في المديرية", { o: DR, c: 'onchange="fillMk()"' })}${F("mk", "السوق", { o: [] })}${IMGF}${F("ds", "وصف الموقع", { ta: 1 })}${LOCF}<button class="b" onclick="sub('s')">حفظ</button></div>`;
     return `<h2>${ttl}</h2><div class="card">${tabs}${A}${B}${C}${W}${F("drs", "موقعك في المديرية", { o: DR })}${F("st", "اسم الشارع")}${F("ds", "وصف العنوان", { ta: 1, n: 1 })}${LOCF}<button class="b" onclick="sub('c')">حفظ</button></div>`;
@@ -961,8 +1052,10 @@ const V = {
   },
   pay() {
     const t =
-      S.cart.reduce((a, c) => a + (S.ps.find((x) => x.id == c.id)?.p || 0) * c.q, 0) +
-      FEE;
+      S.cart.reduce(
+        (a, c) => a + (S.ps.find((x) => x.id == c.id)?.p || 0) * c.q,
+        0,
+      ) + FEE;
     const G = [
       [
         "💳 المحافظ الإلكترونية",
@@ -1117,11 +1210,35 @@ const V = {
 S.al = S.al || {};
 const SUP = "967776319927"; // رقم الدعم الفني
 const DAY = 864e5;
-const OST = { new: "جديد", prep: "قيد التجهيز", ship: "مع المندوب", done: "تم التوصيل", cancel: "ملغي" };
+const OST = {
+  new: "جديد",
+  prep: "قيد التجهيز",
+  ship: "مع المندوب",
+  done: "تم التوصيل",
+  cancel: "ملغي",
+};
 const OFL = ["new", "prep", "ship", "done"];
-const RSN = ["مقاس خاطئ", "عيب تصنيع", "المنتج مختلف عن الوصف", "وصل تالفا", "أخرى"];
-const RL = { pending: "قيد المراجعة", accepted: "تم القبول", rejected: "مرفوض", refunded: "تم استرداد المبلغ" };
-const TKT = ["تأخر في التوصيل", "منتج ناقص أو خاطئ", "منتج تالف", "مشكلة في الدفع", "مشكلة في الحساب", "أخرى"];
+const RSN = [
+  "مقاس خاطئ",
+  "عيب تصنيع",
+  "المنتج مختلف عن الوصف",
+  "وصل تالفا",
+  "أخرى",
+];
+const RL = {
+  pending: "قيد المراجعة",
+  accepted: "تم القبول",
+  rejected: "مرفوض",
+  refunded: "تم استرداد المبلغ",
+};
+const TKT = [
+  "تأخر في التوصيل",
+  "منتج ناقص أو خاطئ",
+  "منتج تالف",
+  "مشكلة في الدفع",
+  "مشكلة في الحساب",
+  "أخرى",
+];
 const fd = (t) => new Date(t).toLocaleDateString("en-GB");
 const wlt = () => (+S.user.wb || 0) + (+S.user.pt || 0) * 10; // الرصيد + (النقطة = 10 ر.ي)
 let UW = false, // استخدام المحفظة في الدفع
@@ -1181,7 +1298,11 @@ function chkAl() {
       }
       if (p.qt === 0) e.o0 = true;
       if (p.p < e.p0) {
-        S.nt.push({ u, t: "انخفض سعر «" + p.n + "» إلى " + fm(p.p), d: Date.now() });
+        S.nt.push({
+          u,
+          t: "انخفض سعر «" + p.n + "» إلى " + fm(p.p),
+          d: Date.now(),
+        });
         if (u == uid()) T("🔔 انخفض سعر «" + p.n + "»");
       }
       e.p0 = p.p;
@@ -1194,14 +1315,22 @@ function nread() {
   });
   render();
 }
-const mi2 = (i, t, a) => `<button class="mi2" onclick="${a}"><span>${i}</span><b>${t}</b><i>‹</i></button>`;
+const mi2 = (i, t, a) =>
+  `<button class="mi2" onclick="${a}"><span>${i}</span><b>${t}</b><i>‹</i></button>`;
 const acMenu = () => {
   const k = S.user.k;
-  if (k == "s") return mi2("📊", "لوحة التحكم والتقارير", "go('dash')") + mi2("🛍️", "إضافة المنتجات", "go('mine')");
+  if (k == "s")
+    return (
+      mi2("📊", "لوحة التحكم والتقارير", "go('dash')") +
+      mi2("🛍️", "إضافة المنتجات", "go('mine')") +
+      mi2("🎧", "الدعم الفني", "go('my','support')")
+    );
   if (k != "c") return "";
   const n = S.nt.filter((x) => x.u == uid() && !x.s);
   return (
-    (n.length ? `<div class="card alb">${n.map((x) => `<div>🔔 ${E(x.t)}</div>`).join("")}<button class="b o" onclick="nread()">حسنا</button></div>` : "") +
+    (n.length
+      ? `<div class="card alb">${n.map((x) => `<div>🔔 ${E(x.t)}</div>`).join("")}<button class="b o" onclick="nread()">حسنا</button></div>`
+      : "") +
     mi2("📦", "طلباتي وتتبع الشحن", "go('my','orders')") +
     mi2("⭐", "تقييماتي", "go('my','myrev')") +
     mi2("↩️", "الإرجاع والاسترداد", "go('my','returns')") +
@@ -1212,41 +1341,31 @@ const acMenu = () => {
   );
 };
 /* ===== الطلب: يُسجَّل كسجل كامل ويخصم المخزون ويضيف النقاط ===== */
-function order() {
+async function order() {
   if (!S.user.loc) return T("حدّد موقعك أولا لإتمام الطلب");
   if (!PM) return T("اختر طريقة الدفع");
   const its = [];
   for (const c of S.cart) {
     const p = S.ps.find((x) => x.id == c.id);
     if (!p) continue;
-    if (p.h || (p.qt != null && p.qt < c.q)) return T("الكمية المطلوبة من «" + p.n + "» غير متوفرة");
+    if (p.h || (p.qt != null && p.qt < c.q))
+      return T("الكمية المطلوبة من «" + p.n + "» غير متوفرة");
     its.push({ id: p.id, n: p.n, p: p.p, q: c.q, s: p.s });
   }
   if (!its.length) return T("السلة فارغة");
   const sub = its.reduce((a, i) => a + i.p * i.q, 0);
-  let disc = 0;
+  let disc = 0,
+    fromW = 0;
   if (UW) {
     disc = Math.min(sub, wlt());
-    const fromW = Math.min(disc, +S.user.wb || 0);
+    fromW = Math.min(disc, +S.user.wb || 0);
+  }
+  const total = sub + FEE - disc;
+  if (!(await sendOrders(its, { fee: FEE, disc, total, pay: PM }))) return;
+  if (UW) {
     S.user.wb = (+S.user.wb || 0) - fromW;
     S.user.pt = Math.max(0, (+S.user.pt || 0) - Math.ceil((disc - fromW) / 10));
   }
-  const total = sub + FEE - disc;
-  S.orders.push({
-    id: Date.now(),
-    no: "A" + (1001 + S.orders.length),
-    aid: S.user.aid,
-    cn: S.user.nm,
-    ph: S.user.ph,
-    ts: Date.now(),
-    items: its,
-    fee: FEE,
-    disc,
-    total,
-    pay: PM,
-    st: "new",
-    ad: S.user.dr ? S.user.dr + " - " + (S.user.st || "") : "",
-  });
   its.forEach((i) => {
     S.sold[i.id] = (S.sold[i.id] || 0) + 1;
     const p = S.ps.find((x) => x.id == i.id);
@@ -1262,15 +1381,25 @@ function order() {
 }
 function ocancel(id) {
   const o = S.orders.find((x) => x.id == id);
-  if (!o || !["new", "prep"].includes(o.st)) return T("لا يمكن إلغاء هذا الطلب الآن");
-  if (!confirm("هل تريد إلغاء هذا الطلب؟ سيعود المبلغ إلى محفظة الزبون.")) return;
+  if (!o || !["new", "prep"].includes(o.st))
+    return T("لا يمكن إلغاء هذا الطلب الآن");
+  if (!confirm("هل تريد إلغاء هذا الطلب؟ سيعود المبلغ إلى محفظة الزبون."))
+    return;
   o.st = "cancel";
+  if (o.uuid)
+    SBC.from("orders")
+      .update({ status: "cancel" })
+      .eq("id", o.uuid)
+      .then((r) => r.error && T("تعذّر تسجيل الإلغاء: " + r.error.message));
   o.items.forEach((i) => {
     const p = S.ps.find((x) => x.id == i.id);
     if (p && p.qt != null) p.qt += i.q;
   });
   const pts = Math.floor(o.total / 1000);
-  [S.accs.find((x) => x.aid == o.aid), S.user.aid == o.aid ? S.user : null].forEach((a) => {
+  [
+    S.accs.find((x) => x.aid == o.aid),
+    S.user.aid == o.aid ? S.user : null,
+  ].forEach((a) => {
     if (a) {
       a.wb = (+a.wb || 0) + o.total;
       a.pt = Math.max(0, (+a.pt || 0) - pts);
@@ -1280,6 +1409,7 @@ function ocancel(id) {
   render();
 }
 function ost(id) {
+  return T("حالة الطلب تُحدَّث من الإدارة");
   const o = S.orders.find((x) => x.id == id),
     n = o && { new: "prep", prep: "ship", ship: "done" }[o.st];
   if (!n) return;
@@ -1315,7 +1445,9 @@ function inv(id) {
 /* ===== التقييمات ===== */
 function rvs(n) {
   RS = n;
-  document.querySelectorAll("#rst button").forEach((b, i) => b.classList.toggle("on", i < n));
+  document
+    .querySelectorAll("#rst button")
+    .forEach((b, i) => b.classList.toggle("on", i < n));
 }
 function rvsave(id) {
   if (!RS) return T("اختر عدد النجوم");
@@ -1327,7 +1459,8 @@ function rvsave(id) {
   if (c) {
     c.t = t;
     if (IMG) c.img = IMG;
-  } else if (t || IMG) a.push({ n: S.user.nm, u, t, img: IMG, d: fd(Date.now()) });
+  } else if (t || IMG)
+    a.push({ n: S.user.nm, u, t, img: IMG, d: fd(Date.now()) });
   T("تم حفظ تقييمك");
   go("my", "myrev");
 }
@@ -1352,7 +1485,20 @@ function retsub() {
     o = S.orders.find((x) => x.id == oid),
     i = o && o.items.find((x) => x.id == pid);
   if (!i) return;
-  S.rets.push({ id: Date.now(), u: S.user.aid, oid: o.id, no: o.no, pid: i.id, n: i.n, s: i.s, amt: i.p * i.q, rs: RSN[+g("rrs")], nt: g("rnt"), d: fd(Date.now()), st: "pending" });
+  S.rets.push({
+    id: Date.now(),
+    u: S.user.aid,
+    oid: o.id,
+    no: o.no,
+    pid: i.id,
+    n: i.n,
+    s: i.s,
+    amt: i.p * i.q,
+    rs: RSN[+g("rrs")],
+    nt: g("rnt"),
+    d: fd(Date.now()),
+    st: "pending",
+  });
   T("تم إرسال طلب الإرجاع");
   go("my", "returns");
 }
@@ -1381,7 +1527,14 @@ function adm(id, q) {
 function adsave() {
   const st = g("al_st");
   if (!st) return T("اكتب اسم الشارع");
-  const a = { id: Date.now(), l: g("al_l"), dr: DR[+g("al_dr")], st, ds: g("al_ds"), loc: LOC };
+  const a = {
+    id: Date.now(),
+    l: g("al_l"),
+    dr: DR[+g("al_dr")],
+    st,
+    ds: g("al_ds"),
+    loc: LOC,
+  };
   (S.user.ads = S.user.ads || []).push(a);
   if (!S.user.da) adm(a.id, 1);
   T("تم حفظ العنوان");
@@ -1407,19 +1560,24 @@ async function shareWA(txt) {
   } catch (e) {
     if (e && e.name == "AbortError") return;
   }
-  window.open("https://wa.me/" + SUP + "?text=" + encodeURIComponent(txt), "_blank", "noopener");
+  window.open(
+    "https://wa.me/" + SUP + "?text=" + encodeURIComponent(txt),
+    "_blank",
+    "noopener",
+  );
 }
-function tksend() {
+async function tksend() {
   const m = g("tkm");
-  if (!m) return T("اكتب سبب المراسلة");
-  const o = S.orders.find((x) => x.id == g("tko")),
-    ty = TKT[+g("tkt")];
-  S.tk.push({ id: Date.now(), u: S.user.aid, no: o ? o.no : "", ty, m, img: IMG, d: fd(Date.now()), st: "open" });
-  const txt = ["شكوى من الزبون", "الاسم: " + S.user.nm + " - الرقم: " + S.user.ph, o ? "رقم الطلب: " + o.no : "", "نوع المشكلة: " + ty, "التفاصيل: " + m].filter(Boolean).join("\n");
-  save();
-  T("تم تسجيل شكواك، أكمل الإرسال للدعم");
-  shareWA(txt);
-  go("my", "support");
+  if (!m) return T("اكتب رسالتك");
+  const { error } = await SBC.from("support_messages").insert({
+    customer_id: S.user.aid,
+    sender: "customer",
+    body: m,
+  });
+  if (error) return T("تعذّر الإرسال: " + error.message);
+  await myMsgs();
+  T("تم إرسال رسالتك، سيتم الرد عليك من قبل الدعم الفني");
+  render();
 }
 /* ===== المحل: المخزون والظهور ===== */
 function qtadd(id, d) {
@@ -1448,8 +1606,11 @@ const dtab = (t) => {
 };
 const MY = {
   orders() {
-    const l = S.orders.filter((o) => o.aid == S.user.aid).sort((a, b) => b.ts - a.ts);
-    if (!l.length) return '<h2>طلباتي</h2><div class="em">لا توجد طلبات سابقة.</div>';
+    const l = S.orders
+      .filter((o) => o.aid == S.user.aid)
+      .sort((a, b) => b.ts - a.ts);
+    if (!l.length)
+      return '<h2>طلباتي</h2><div class="em">لا توجد طلبات سابقة.</div>';
     return (
       "<h2>طلباتي</h2>" +
       l
@@ -1462,15 +1623,31 @@ const MY = {
   },
   myrev() {
     const u = uid(),
-      rev = (id) => ({ r: (S.rt[id] || {})[u] || 0, c: (S.cm[id] || []).find((c) => c.u == u) }),
-      bought = [...new Set(S.orders.filter((o) => o.aid == S.user.aid && o.st == "done").flatMap((o) => o.items.map((i) => i.id)))],
-      todo = bought.map((id) => S.ps.find((p) => p.id == id)).filter((p) => p && !rev(p.id).r && !rev(p.id).c),
+      rev = (id) => ({
+        r: (S.rt[id] || {})[u] || 0,
+        c: (S.cm[id] || []).find((c) => c.u == u),
+      }),
+      bought = [
+        ...new Set(
+          S.orders
+            .filter((o) => o.aid == S.user.aid && o.st == "done")
+            .flatMap((o) => o.items.map((i) => i.id)),
+        ),
+      ],
+      todo = bought
+        .map((id) => S.ps.find((p) => p.id == id))
+        .filter((p) => p && !rev(p.id).r && !rev(p.id).c),
       all = S.ps.filter((p) => rev(p.id).r || rev(p.id).c);
     return (
       "<h2>تقييماتي</h2>" +
       (todo.length
         ? '<h3 class="dg">بانتظار تقييمك</h3>' +
-          todo.map((p) => `<div class="card row"><b>${E(p.n)}</b><button class="b s" style="width:auto;margin:0;padding:8px 18px" onclick="go('my','revf:${p.id}')">قيّم</button></div>`).join("")
+          todo
+            .map(
+              (p) =>
+                `<div class="card row"><b>${E(p.n)}</b><button class="b s" style="width:auto;margin:0;padding:8px 18px" onclick="go('my','revf:${p.id}')">قيّم</button></div>`,
+            )
+            .join("")
         : "") +
       '<h3 class="dg">سجل تقييماتي</h3>' +
       (all.length
@@ -1492,7 +1669,14 @@ const MY = {
   returns() {
     const ops = S.orders
         .filter((o) => o.aid == S.user.aid && o.st == "done")
-        .flatMap((o) => o.items.filter((i) => !S.rets.some((r) => r.oid == o.id && r.pid == i.id)).map((i) => `<option value="${o.id}_${i.id}">${E(i.n)} (طلب ${E(o.no)})</option>`)),
+        .flatMap((o) =>
+          o.items
+            .filter((i) => !S.rets.some((r) => r.oid == o.id && r.pid == i.id))
+            .map(
+              (i) =>
+                `<option value="${o.id}_${i.id}">${E(i.n)} (طلب ${E(o.no)})</option>`,
+            ),
+        ),
       l = S.rets.filter((r) => r.u == S.user.aid).sort((a, b) => b.id - a.id);
     return (
       "<h2>الإرجاع والاسترداد</h2>" +
@@ -1501,7 +1685,12 @@ const MY = {
         : '<div class="card mu">يمكنك طلب إرجاع منتج بعد استلام الطلب (حالة «تم التوصيل»).</div>') +
       (l.length
         ? '<h3 class="dg">متابعة طلباتي</h3>' +
-          l.map((r) => `<div class="card"><div class="row"><b>${E(r.n)}</b><span class="tg">${RL[r.st]}</span></div><p class="mu" style="margin:6px 0">طلب ${E(r.no)} · ${E(r.rs)} · ${r.d}</p>${r.st == "refunded" ? `<p>تمت إضافة ${fm(r.amt)} إلى محفظتك</p>` : ""}</div>`).join("")
+          l
+            .map(
+              (r) =>
+                `<div class="card"><div class="row"><b>${E(r.n)}</b><span class="tg">${RL[r.st]}</span></div><p class="mu" style="margin:6px 0">طلب ${E(r.no)} · ${E(r.rs)} · ${r.d}</p>${r.st == "refunded" ? `<p>تمت إضافة ${fm(r.amt)} إلى محفظتك</p>` : ""}</div>`,
+            )
+            .join("")
         : "")
     );
   },
@@ -1526,23 +1715,38 @@ const MY = {
     return `<h2>المحفظة ونقاط الولاء</h2><div class="kpis"><div class="kp"><small>الرصيد المسترجع</small><b>${fm(wb)}</b></div><div class="kp"><small>نقاط الولاء</small><b>${pt}</b></div></div><div class="card mu" style="line-height:1.9">كل 1,000 ر.ي من مشترياتك = نقطة واحدة، وكل نقطة تخصم 10 ر.ي من طلبك القادم. يُضاف الرصيد المسترجع عند إلغاء طلب أو قبول طلب إرجاع، ويمكنك استخدامه من صفحة الدفع.</div>`;
   },
   support() {
-    const os = S.orders.filter((o) => o.aid == S.user.aid),
-      tk = S.tk.filter((t) => t.u == S.user.aid).sort((a, b) => b.id - a.id);
+    const m = S.msgs || [];
     return (
-      `<h2>الدعم الفني</h2><div class="sup"><a class="b s" target="_blank" rel="noopener" href="https://wa.me/${SUP}">${ic("wa")}<span>واتساب</span></a><a class="b o" href="tel:+${SUP}">${ic("phone")}<span>اتصال</span></a></div><h3 class="dg">فتح شكوى</h3><div class="card"><label>الطلب المتعلق بالشكوى <i>(اختياري)</i><select id="tko"><option value="">بدون طلب محدد</option>${os.map((o) => `<option value="${o.id}">${E(o.no)} - ${fd(o.ts)}</option>`).join("")}</select></label><label>نوع المشكلة<select id="tkt">${TKT.map((x, i) => `<option value="${i}">${E(x)}</option>`).join("")}</select></label><label>سبب المراسلة<textarea id="tkm" rows="4" placeholder="اشرح المشكلة بالتفصيل"></textarea></label>${IMGF.replace("صورة", "صورة للمشكلة")}<button class="b" onclick="tksend()">إرسال</button></div>` +
-      (tk.length ? '<h3 class="dg">شكاواي</h3>' + tk.map((t) => `<div class="card"><div class="row"><b>${E(t.ty)}</b><span class="tg">قيد المتابعة</span></div><p class="mu" style="margin:6px 0">${t.d}${t.no ? " · طلب " + E(t.no) : ""}</p><p>${E(t.m)}</p></div>`).join("") : "")
+      `<h2>الدعم الفني</h2><div class="sup"><a class="b s" target="_blank" rel="noopener" href="https://wa.me/${SUP}">${ic("wa")}<span>واتساب</span></a><a class="b o" href="tel:+${SUP}">${ic("phone")}<span>اتصال</span></a></div><h3 class="dg">مراسلة الدعم الفني</h3>` +
+      (m.length
+        ? m
+            .map(
+              (x) =>
+                `<div class="bb ${x.sender == "customer" ? "me" : ""}">${E(x.body)}<small>${fd(x.created_at)}</small></div>`,
+            )
+            .join("")
+        : '<div class="em">لا توجد رسائل بعد. اكتب مشكلتك وسيتم الرد عليك من قبل الدعم الفني.</div>') +
+      (m.length && m[m.length - 1].sender == "customer"
+        ? '<p class="mu">تم استلام رسالتك، وسيتم الرد عليك من قبل الدعم الفني.</p>'
+        : "") +
+      '<div class="card"><label>رسالتك<textarea id="tkm" rows="3"></textarea></label><button class="b" onclick="tksend()">إرسال</button></div>'
     );
   },
 };
 V.my = (a) => {
   if (S.role == "guest") return V.login();
-  if (S.role != "customer") return '<div class="em">هذه الصفحة خاصة بحسابات الزبائن.</div>';
   const [k, x] = String(a || "orders").split(":");
-  return `<button class="b o" style="margin:0 0 12px" onclick="go('acct')">‹ العودة لحسابي</button>` + (MY[k] ? MY[k](x) : "");
+  if (S.role != "customer" && !(S.role == "store" && k == "support"))
+    return '<div class="em">هذه الصفحة خاصة بحسابات الزبائن.</div>';
+  return (
+    `<button class="b o" style="margin:0 0 12px" onclick="go('acct')">‹ العودة لحسابي</button>` +
+    (MY[k] ? MY[k](x) : "")
+  );
 };
 V.dash = () => {
   if (S.role == "guest") return V.login();
-  if (S.role != "store") return '<h2>لوحة التحكم</h2><div class="em">هذه الصفحة خاصة بالمحلات التجارية.</div>';
+  if (S.role != "store")
+    return '<h2>لوحة التحكم</h2><div class="em">هذه الصفحة خاصة بالمحلات التجارية.</div>';
   const sid = S.user.sid,
     now = Date.now(),
     d0 = new Date();
@@ -1552,8 +1756,21 @@ V.dash = () => {
     live = mo.filter((o) => o.st != "cancel"),
     its = (o) => o.items.filter((i) => i.s == sid),
     tot = (o) => its(o).reduce((a, i) => a + i.p * i.q, 0),
-    sum = (f, to = Infinity) => live.filter((o) => o.ts >= f && o.ts < to).reduce((a, o) => a + tot(o), 0),
-    qn = (id, f) => live.filter((o) => o.ts >= f).reduce((a, o) => a + its(o).filter((i) => i.id == id).reduce((b, i) => b + i.q, 0), 0),
+    sum = (f, to = Infinity) =>
+      live
+        .filter((o) => o.ts >= f && o.ts < to)
+        .reduce((a, o) => a + tot(o), 0),
+    qn = (id, f) =>
+      live
+        .filter((o) => o.ts >= f)
+        .reduce(
+          (a, o) =>
+            a +
+            its(o)
+              .filter((i) => i.id == id)
+              .reduce((b, i) => b + i.q, 0),
+          0,
+        ),
     ps = S.ps.filter((p) => p.s == sid),
     nNew = mo.filter((o) => o.st == "new").length,
     nDone = mo.filter((o) => o.st == "done").length,
@@ -1562,20 +1779,42 @@ V.dash = () => {
     nRet = rets.filter((r) => r.st == "pending").length,
     bad = ps.filter((p) => {
       const v = Object.values(S.rt[p.id] || {});
-      return v.length && (v.reduce((a, b) => a + b, 0) / v.length < 3 || v.some((x) => x <= 2));
+      return (
+        v.length &&
+        (v.reduce((a, b) => a + b, 0) / v.length < 3 || v.some((x) => x <= 2))
+      );
     }),
-    chips = [nNew && `🆕 ${nNew} طلب جديد`, low.length && `📉 ${low.length} منتج يوشك على النفاد`, bad.length && `⚠️ ${bad.length} منتج بتقييم منخفض`, nRet && `↩️ ${nRet} طلب إرجاع`].filter(Boolean),
-    TB = [["rep", "التقارير", 0], ["ord", "الطلبات", nNew + nRet], ["prd", "المنتجات", 0], ["rev", "التقييمات", bad.length], ["inv", "المخزون", low.length], ["cat", "الكتالوج", 0]];
+    chips = [
+      nNew && `🆕 ${nNew} طلب جديد`,
+      low.length && `📉 ${low.length} منتج يوشك على النفاد`,
+      bad.length && `⚠️ ${bad.length} منتج بتقييم منخفض`,
+      nRet && `↩️ ${nRet} طلب إرجاع`,
+    ].filter(Boolean),
+    TB = [
+      ["rep", "التقارير", 0],
+      ["ord", "الطلبات", nNew + nRet],
+      ["prd", "المنتجات", 0],
+      ["rev", "التقييمات", bad.length],
+      ["inv", "المخزون", low.length],
+      ["cat", "الكتالوج", 0],
+    ];
   let body = "";
   if (DT == "rep") {
     const days = [...Array(7)].map((_, i) => {
         const f = t0 - (6 - i) * DAY;
-        return { l: new Date(f).toLocaleDateString("ar", { weekday: "short" }), v: sum(f, f + DAY) };
+        return {
+          l: new Date(f).toLocaleDateString("ar", { weekday: "short" }),
+          v: sum(f, f + DAY),
+        };
       }),
       mx = Math.max(...days.map((d) => d.v), 1);
     body = `<div class="kpis"><div class="kp"><small>مبيعات اليوم</small><b>${fm(sum(t0))}</b></div><div class="kp"><small>آخر 7 أيام</small><b>${fm(sum(t0 - 6 * DAY))}</b></div><div class="kp"><small>آخر 30 يوما</small><b>${fm(sum(t0 - 29 * DAY))}</b></div><div class="kp"><small>إجمالي الدخل</small><b>${fm(sum(0))}</b></div></div><div class="card"><b>المبيعات خلال 7 أيام</b><div class="bars">${days.map((d) => `<div class="bc"><em>${d.v ? Math.round(d.v / 1000) + "k" : ""}</em><i style="height:${Math.max(3, (d.v / mx) * 100)}%"></i><small>${d.l}</small></div>`).join("")}</div></div><div class="card"><div class="row"><b>الطلبات</b><small class="mu">${mo.length} طلب</small></div><div class="pbar"><i style="width:${mo.length ? (nDone / mo.length) * 100 : 0}%"></i></div><div class="row"><span>🆕 جديدة: <b>${nNew}</b></span><span>✅ مكتملة: <b>${nDone}</b></span></div></div>`;
   } else if (DT == "ord") {
-    const nx = { new: "بدء التجهيز", prep: "تسليم للمندوب", ship: "تأكيد التوصيل" };
+    const nx = {
+      new: "بدء التجهيز",
+      prep: "تسليم للمندوب",
+      ship: "تأكيد التوصيل",
+    };
     body =
       (mo.length
         ? mo
@@ -1583,26 +1822,71 @@ V.dash = () => {
             .sort((a, b) => b.ts - a.ts)
             .map(
               (o) =>
-                `<div class="card"><div class="row"><b>طلب ${E(o.no)}</b><span class="tg">${OST[o.st]}</span></div><div class="mu" style="margin:6px 0">${fd(o.ts)} · ${E(o.cn)} · <span dir="ltr">${E(o.ph)}</span></div>${its(o).map((i) => `<div class="li">${E(i.n)} × ${i.q} — ${fm(i.p * i.q)}</div>`).join("")}<div class="row"><b>إجمالي المحل</b><b class="pr">${fm(tot(o))}</b></div>${nx[o.st] ? `<button class="b s" onclick="ost(${o.id})">${nx[o.st]}</button>` : ""}${["new", "prep"].includes(o.st) ? `<button class="b o" onclick="ocancel(${o.id})">إلغاء الطلب</button>` : ""}</div>`,
+                `<div class="card"><div class="row"><b>طلب ${E(o.no)}</b><span class="tg">${OST[o.st]}</span></div><div class="mu" style="margin:6px 0">${fd(o.ts)} · ${E(o.cn)} · <span dir="ltr">${E(o.ph)}</span></div>${its(
+                  o,
+                )
+                  .map(
+                    (i) =>
+                      `<div class="li">${E(i.n)} × ${i.q} — ${fm(i.p * i.q)}</div>`,
+                  )
+                  .join(
+                    "",
+                  )}<div class="row"><b>إجمالي المحل</b><b class="pr">${fm(tot(o))}</b></div>${nx[o.st] ? `<button class="b s" onclick="ost(${o.id})">${nx[o.st]}</button>` : ""}${["new", "prep"].includes(o.st) ? `<button class="b o" onclick="ocancel(${o.id})">إلغاء الطلب</button>` : ""}</div>`,
             )
             .join("")
         : '<div class="em">لا توجد طلبات بعد.</div>') +
       (rets.length
         ? '<h3 class="dg">طلبات الإرجاع</h3>' +
-          rets.map((r) => `<div class="card"><div class="row"><b>${E(r.n)}</b><span class="tg">${RL[r.st]}</span></div><p class="mu" style="margin:6px 0">طلب ${E(r.no)} · السبب: ${E(r.rs)}${r.nt ? " · " + E(r.nt) : ""}</p>${r.st == "pending" ? `<div class="row"><button class="b s" onclick="retact(${r.id},1)">قبول واسترداد ${fm(r.amt)}</button><button class="b o" onclick="retact(${r.id},0)">رفض</button></div>` : ""}</div>`).join("")
+          rets
+            .map(
+              (r) =>
+                `<div class="card"><div class="row"><b>${E(r.n)}</b><span class="tg">${RL[r.st]}</span></div><p class="mu" style="margin:6px 0">طلب ${E(r.no)} · السبب: ${E(r.rs)}${r.nt ? " · " + E(r.nt) : ""}</p>${r.st == "pending" ? `<div class="row"><button class="b s" onclick="retact(${r.id},1)">قبول واسترداد ${fm(r.amt)}</button><button class="b o" onclick="retact(${r.id},0)">رفض</button></div>` : ""}</div>`,
+            )
+            .join("")
         : "");
   } else if (DT == "prd") {
-    const rows = ps.map((p) => ({ p, d: qn(p.id, t0), m: qn(p.id, t0 - 29 * DAY), t: S.sold[p.id] || 0 })),
-      top = rows.filter((r) => r.m > 0).sort((a, b) => b.m - a.m).slice(0, 5),
-      old = (p) => (p.ts || p.id > 1e12 ? (p.ts || p.id) < now - 30 * DAY : true),
+    const rows = ps.map((p) => ({
+        p,
+        d: qn(p.id, t0),
+        m: qn(p.id, t0 - 29 * DAY),
+        t: S.sold[p.id] || 0,
+      })),
+      top = rows
+        .filter((r) => r.m > 0)
+        .sort((a, b) => b.m - a.m)
+        .slice(0, 5),
+      old = (p) =>
+        p.ts || p.id > 1e12 ? (p.ts || p.id) < now - 30 * DAY : true,
       stale = rows.filter((r) => r.m == 0 && old(r.p));
     body =
       '<h3 class="dg">🏆 الأكثر مبيعا</h3>' +
-      (top.length ? top.map((r, i) => `<div class="card row"><span><b>${i + 1}. ${E(r.p.n)}</b><small class="mu" style="display:block">${r.m} قطعة خلال 30 يوما${r.p.qt != null && r.p.qt <= 5 ? " · تأكد من توفر المخزون" : ""}</small></span><span class="tg">${r.m}</span></div>`).join("") : '<div class="em" style="padding:20px">لا توجد مبيعات بعد.</div>') +
+      (top.length
+        ? top
+            .map(
+              (r, i) =>
+                `<div class="card row"><span><b>${i + 1}. ${E(r.p.n)}</b><small class="mu" style="display:block">${r.m} قطعة خلال 30 يوما${r.p.qt != null && r.p.qt <= 5 ? " · تأكد من توفر المخزون" : ""}</small></span><span class="tg">${r.m}</span></div>`,
+            )
+            .join("")
+        : '<div class="em" style="padding:20px">لا توجد مبيعات بعد.</div>') +
       '<h3 class="dg">💤 منتجات راكدة</h3>' +
-      (stale.length ? stale.map((r) => `<div class="card row"><span><b>${E(r.p.n)}</b><small class="mu" style="display:block">لم يُبع منذ 30 يوما، جرّب تخفيض السعر</small></span><button class="op" style="width:auto;padding:8px 14px" onclick="go('editp',${r.p.id})">تعديل السعر</button></div>`).join("") : '<div class="em" style="padding:20px">لا توجد منتجات راكدة.</div>') +
+      (stale.length
+        ? stale
+            .map(
+              (r) =>
+                `<div class="card row"><span><b>${E(r.p.n)}</b><small class="mu" style="display:block">لم يُبع منذ 30 يوما، جرّب تخفيض السعر</small></span><button class="op" style="width:auto;padding:8px 14px" onclick="go('editp',${r.p.id})">تعديل السعر</button></div>`,
+            )
+            .join("")
+        : '<div class="em" style="padding:20px">لا توجد منتجات راكدة.</div>') +
       '<h3 class="dg">📊 حجم مبيعات كل منتج</h3><div class="card">' +
-      (rows.length ? '<div class="tb"><b>المنتج</b><b>اليوم</b><b>الشهر</b><b>الكل</b></div>' + rows.map((r) => `<div class="tb"><span>${E(r.p.n)}</span><span>${r.d}</span><span>${r.m}</span><span>${r.t}</span></div>`).join("") : '<p class="mu">لا توجد منتجات.</p>') +
+      (rows.length
+        ? '<div class="tb"><b>المنتج</b><b>اليوم</b><b>الشهر</b><b>الكل</b></div>' +
+          rows
+            .map(
+              (r) =>
+                `<div class="tb"><span>${E(r.p.n)}</span><span>${r.d}</span><span>${r.m}</span><span>${r.t}</span></div>`,
+            )
+            .join("")
+        : '<p class="mu">لا توجد منتجات.</p>') +
       "</div>";
   } else if (DT == "rev") {
     body = ps.length
@@ -1614,7 +1898,10 @@ V.dash = () => {
               avg = n ? v.reduce((a, b) => a + b, 0) / n : 0,
               cm = (S.cm[p.id] || []).slice(-3).reverse(),
               isb = n && (avg < 3 || v.some((x) => x <= 2)),
-              lows = Object.entries(rs).filter((e) => e[1] <= 2).map((e) => S.accs.find((a) => a.aid == e[0] || a.ph == e[0])).filter((a) => a && a.ph);
+              lows = Object.entries(rs)
+                .filter((e) => e[1] <= 2)
+                .map((e) => S.accs.find((a) => a.aid == e[0] || a.ph == e[0]))
+                .filter((a) => a && a.ph);
             return `<div class="card${isb ? " wr" : ""}"><div class="row"><b>${E(p.n)}</b><span class="pr" style="margin:0">★ ${n ? avg.toFixed(1) : "—"} <small class="mu">(${n})</small></span></div>${isb ? '<p style="margin:8px 0;color:#e8a33d">⚠️ تقييم منخفض: عالج المشكلة أو تواصل مع العميل</p>' : ""}${cm.map((c) => `<div class="li"><b>${E(c.n)}</b> <small class="mu">${E(c.d)}</small><br>${E(c.t)}</div>`).join("")}${lows.map((a) => `<a class="b o" target="_blank" rel="noopener" href="https://wa.me/967${E(a.ph)}">تواصل مع ${E(a.nm)}</a>`).join("")}</div>`;
           })
           .join("")
@@ -1631,7 +1918,12 @@ V.dash = () => {
   } else {
     body =
       `<button class="b s" onclick="go('mine')">+ إضافة منتج جديد</button>` +
-      ps.map((p) => `<div class="card"><div class="row"><b>${E(p.n)}</b><span class="tg">${p.h ? "مخفي" : "ظاهر"}</span></div><p class="mu" style="margin:6px 0">${fm(p.p)}${p.d ? " · " + E(p.d) : ""}</p><div class="row"><button class="b o" onclick="go('editp',${p.id})">تعديل</button><button class="b o" onclick="tgl(${p.id})">${p.h ? "إظهار" : "إخفاء"}</button><button class="b o" onclick="delp(${p.id})">حذف</button></div></div>`).join("");
+      ps
+        .map(
+          (p) =>
+            `<div class="card"><div class="row"><b>${E(p.n)}</b><span class="tg">${p.h ? "مخفي" : "ظاهر"}</span></div><p class="mu" style="margin:6px 0">${fm(p.p)}${p.d ? " · " + E(p.d) : ""}</p><div class="row"><button class="b o" onclick="go('editp',${p.id})">تعديل</button><button class="b o" onclick="tgl(${p.id})">${p.h ? "إظهار" : "إخفاء"}</button><button class="b o" onclick="delp(${p.id})">حذف</button></div></div>`,
+        )
+        .join("");
   }
   return `<h2>لوحة التحكم</h2><p class="mu" style="margin:-6px 0 12px">${E(S.user.sn || "")}</p>${chips.length ? `<div class="card alb">${chips.map((c) => `<span>${c}</span>`).join("")}</div>` : ""}<div class="tabs">${TB.map((t) => `<button class="op ${DT == t[0] ? "on" : ""}" onclick="dtab('${t[0]}')">${t[1]}${t[2] ? ` <span class="bd2">${t[2]}</span>` : ""}</button>`).join("")}</div>${body}`;
 };
@@ -1645,7 +1937,11 @@ function nav() {
     ["search", "بحث", "go('search')", "search"],
   ];
   if (r == "store" || r == "delivery")
-    it.push(r == "store" ? ["box", "لوحتي", "go('dash')", "dash"] : ["box", "طلباتي", "go('mine')", "mine"]);
+    it.push(
+      r == "store"
+        ? ["box", "لوحتي", "go('dash')", "dash"]
+        : ["box", "طلباتي", "go('mine')", "mine"],
+    );
   else it.push(["cart", "السلة", "go('cart')", "cart"]);
   it.push([
     "user",
@@ -1698,5 +1994,463 @@ $("#cp").textContent =
 $("#gear").innerHTML = ic("gear");
 applyTheme();
 $("#mn").innerHTML = ic("menu");
+/* ===== الحسابات والطلبات والدعم عبر Supabase ===== */
+async function subC() {
+  const nm = g("nm"),
+    ph = g("ph"),
+    em = g("em").toLowerCase(),
+    pw = g("pw");
+  if (!nm) return T("اكتب الاسم الشخصي");
+  if (!/^7\d{8}$/.test(ph)) return T("الرقم من 9 أرقام ويبدأ بـ 7");
+  if (em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))
+    return T("الإيميل غير صحيح، اكتبه صحيحا أو اتركه فارغا");
+  if (!g("st")) return T("اكتب اسم الشارع");
+  if (pw.length < 6) return T("كلمة المرور 6 أحرف أو أكثر");
+  const { data, error } = await SBC.auth.signUp({
+    email: PMAIL(ph),
+    password: pw,
+    options: { data: { full_name: nm, phone: ph } },
+  });
+  if (error)
+    return T(
+      /registered|exists/i.test(error.message)
+        ? "هذا الرقم مسجل من قبل، اختر «لدي حساب من قبل»"
+        : "تعذّر إنشاء الحساب: " + error.message,
+    );
+  if (!data.session)
+    return T(
+      "تم إنشاء الحساب لكن «تأكيد الإيميل» ما زال مفعّلا في Supabase. أوقفه ثم جرّب",
+    );
+  const dr = DR[g("drs")],
+    st = g("st"),
+    ds = g("ds"),
+    [la, ln] = (LOC || "").split(",").map(Number);
+  const prof = {
+    id: data.user.id,
+    role: "customer",
+    full_name: nm,
+    phone: ph,
+    email: em || null,
+    district: dr,
+    address: [dr, st, ds].filter(Boolean).join(" - "),
+    lat: LOC ? la : null,
+    lng: LOC ? ln : null,
+  };
+  const r = await SBC.from("profiles").upsert(prof);
+  if (r.error) return T("تعذّر حفظ بياناتك: " + r.error.message);
+  S.user = {
+    k: "c",
+    aid: data.user.id,
+    nm,
+    ph,
+    em,
+    dr,
+    st,
+    ds,
+    loc: LOC || "",
+  };
+  S.role = "customer";
+  await myOrders();
+  await myMsgs();
+  live();
+  T("تم الحفظ، أهلا بك");
+  go("home");
+}
+async function signinC() {
+  const em0 = g("em").toLowerCase(),
+    pw = g("pw");
+  if (!em0) return T("اكتب رقم الجوال أو الإيميل");
+  const em = /^7\d{8}$/.test(em0) ? PMAIL(em0) : em0;
+  if (!pw) return T("اكتب كلمة المرور");
+  const { data, error } = await SBC.auth.signInWithPassword({
+    email: em,
+    password: pw,
+  });
+  if (error) return T("الرقم أو الإيميل أو كلمة المرور غير صحيحة");
+  if (!(await loadMe(data.user.id))) return;
+  await myMsgs();
+  T("أهلا بعودتك " + S.user.nm);
+  go("acct");
+}
+async function loadMe(id) {
+  const { data: p } = await SBC.from("profiles")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (!p || !["customer", "store"].includes(p.role)) {
+    await SBC.auth.signOut();
+    T("هذا الحساب غير مخصص لهذا الموقع");
+    return false;
+  }
+  const old = S.user && S.user.aid == p.id ? S.user : {};
+  if (p.role == "store") {
+    const { data: st } = await SBC.from("stores")
+      .select("*")
+      .eq("owner_id", id)
+      .order("created_at")
+      .limit(1)
+      .maybeSingle();
+    if (!st) {
+      await SBC.auth.signOut();
+      T("لا يوجد محل مرتبط بهذا الحساب");
+      return false;
+    }
+    if (st.status == "suspended") {
+      await SBC.auth.signOut();
+      S.role = "guest";
+      S.user = {};
+      T("تم إيقاف حساب المحل من قبل الإدارة. تواصل مع الدعم الفني");
+      return false;
+    }
+    const sid = hid(st.id);
+    if (!S.ss.some((x) => x.id == sid))
+      S.ss.push({
+        id: sid,
+        uuid: st.id,
+        n: st.name,
+        t: st.category || "",
+        m: MK.findIndex((m) => m.n == st.market),
+        mt: st.market || "",
+        d: st.area || "",
+        loc: st.lat != null && st.lng != null ? st.lat + "," + st.lng : "",
+        ts: Date.parse(st.created_at) || 0,
+        local: true,
+      });
+    S.user = {
+      ...old,
+      k: "s",
+      aid: p.id,
+      nm: p.full_name || "",
+      ph: p.phone || "",
+      em: p.email || "",
+      sid,
+      sn: st.name,
+      ds: st.area || "",
+      suuid: st.id,
+    };
+    S.role = "store";
+    await storeOrders();
+    await myMsgs();
+    live();
+    return true;
+  }
+  S.user = {
+    ...old,
+    k: "c",
+    aid: p.id,
+    nm: p.full_name || "",
+    ph: p.phone || "",
+    em: p.email || "",
+    dr: p.district || old.dr || "",
+    st: old.st || "",
+    ds: old.ds || "",
+    loc: p.lat != null && p.lng != null ? p.lat + "," + p.lng : old.loc || "",
+  };
+  S.role = "customer";
+  await myOrders();
+  live();
+  return true;
+}
+async function subS() {
+  const nm = g("nm"),
+    ph = g("ph"),
+    em = g("em").toLowerCase(),
+    pw = g("pw"),
+    sn = g("sn");
+  if (!nm) return T("اكتب الاسم الشخصي");
+  if (!/^7\d{8}$/.test(ph)) return T("الرقم من 9 أرقام ويبدأ بـ 7");
+  if (!sn) return T("اكتب اسم المحل التجاري");
+  if (em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em))
+    return T("الإيميل غير صحيح، اكتبه صحيحا أو اتركه فارغا");
+  if (pw.length < 6) return T("كلمة المرور 6 أحرف أو أكثر");
+  const { data, error } = await SBC.auth.signUp({
+    email: PMAIL(ph),
+    password: pw,
+    options: { data: { full_name: nm, phone: ph } },
+  });
+  if (error)
+    return T(
+      /registered|exists/i.test(error.message)
+        ? "هذا الرقم مسجل من قبل، اختر «لدي حساب من قبل»"
+        : "تعذّر إنشاء الحساب: " + error.message,
+    );
+  if (!data.session)
+    return T(
+      "تم إنشاء الحساب لكن «تأكيد الإيميل» ما زال مفعّلا في Supabase. أوقفه ثم جرّب",
+    );
+  const uid = data.user.id,
+    mk = +g("mk"),
+    ty = TY[g("ty")],
+    ds = g("ds"),
+    [la, ln] = (LOC || "").split(",").map(Number);
+  const r = await SBC.from("profiles").upsert({
+    id: uid,
+    role: "store",
+    full_name: nm,
+    phone: ph,
+    email: em || null,
+  });
+  if (r.error) return T("تعذّر حفظ بياناتك: " + r.error.message);
+  const { data: st, error: e2 } = await SBC.from("stores")
+    .insert({
+      owner_id: uid,
+      name: sn,
+      category: ty,
+      market: (MK[mk] || {}).n || null,
+      area: ds,
+      address: DR[g("drs")] || null,
+      lat: LOC ? la : null,
+      lng: LOC ? ln : null,
+      status: "pending",
+    })
+    .select()
+    .single();
+  if (e2) return T("تعذّر تسجيل المحل: " + e2.message);
+  const sid = hid(st.id);
+  S.ss.push({
+    id: sid,
+    uuid: st.id,
+    n: sn,
+    t: ty,
+    m: mk,
+    mt: (MK[mk] || {}).n || "",
+    d: ds,
+    img: IMG,
+    loc: LOC,
+    ts: Date.now(),
+    local: true,
+  });
+  S.user = {
+    k: "s",
+    aid: uid,
+    nm,
+    ph,
+    em,
+    sid,
+    sn,
+    ds,
+    img: IMG,
+    suuid: st.id,
+  };
+  S.role = "store";
+  live();
+  T("تم إنشاء حسابك. محلك بانتظار اعتماد الإدارة");
+  go("home");
+}
+async function storeOrders() {
+  try {
+    const [o, it] = await Promise.all([
+      SBC.from("orders").select("*").eq("store_id", S.user.suuid),
+      SBC.from("order_items").select("*"),
+    ]);
+    if (o.error) return;
+    const ist = {};
+    (it.data || []).forEach((i) =>
+      (ist[i.order_id] = ist[i.order_id] || []).push({
+        id: i.product_id ? hid(i.product_id) : 0,
+        n: i.name,
+        p: i.price,
+        q: i.qty,
+        s: S.user.sid,
+      }),
+    );
+    const mine = o.data.map((r) => ({
+      id: hid(r.id),
+      uuid: r.id,
+      no: "A" + (r.order_no ?? ""),
+      aid: r.customer_id,
+      cn: r.cname || "زبون",
+      ph: r.phone || "",
+      ts: Date.parse(r.created_at) || 0,
+      items: ist[r.id] || [],
+      fee: r.fee || 0,
+      disc: r.disc || 0,
+      total: r.total,
+      pay: r.pay || "",
+      st: r.status,
+      ad: r.address || "",
+    }));
+    S.orders = S.orders
+      .filter((x) => !mine.some((m) => m.uuid == x.uuid))
+      .concat(mine);
+  } catch (e) {}
+}
+async function myOrders() {
+  try {
+    const [o, it] = await Promise.all([
+      SBC.from("orders").select("*").eq("customer_id", S.user.aid),
+      SBC.from("order_items").select("*"),
+    ]);
+    if (o.error) return;
+    const ist = {};
+    (it.data || []).forEach((i) =>
+      (ist[i.order_id] = ist[i.order_id] || []).push({
+        id: i.product_id ? hid(i.product_id) : 0,
+        n: i.name,
+        p: i.price,
+        q: i.qty,
+        s: 0,
+      }),
+    );
+    const mine = o.data.map((r) => ({
+      id: hid(r.id),
+      uuid: r.id,
+      no: "A" + (r.order_no ?? ""),
+      aid: S.user.aid,
+      cn: S.user.nm,
+      ph: r.phone || S.user.ph,
+      ts: Date.parse(r.created_at) || 0,
+      items: ist[r.id] || [],
+      fee: r.fee || 0,
+      disc: r.disc || 0,
+      total: r.total,
+      pay: r.pay || "",
+      st: r.status,
+      ad: r.address || "",
+    }));
+    S.orders = S.orders.filter((x) => x.aid != S.user.aid).concat(mine);
+  } catch (e) {}
+}
+async function myMsgs() {
+  const { data } = await SBC.from("support_messages")
+    .select("*")
+    .eq("customer_id", S.user.aid)
+    .order("created_at");
+  S.msgs = data || [];
+}
+function live() {
+  if (RT || !S.user.aid) return;
+  RT = SBC.channel("me-" + S.user.aid)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "orders" },
+      async (e) => {
+        if (e.new.customer_id != S.user.aid) return;
+        await myOrders();
+        T(
+          "تحديث طلبك A" +
+            (e.new.order_no ?? "") +
+            ": " +
+            (OST[e.new.status] || ""),
+        );
+        if (["my", "acct"].includes(S.view)) render();
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "stores" },
+      (e) => {
+        if (
+          S.user.k != "s" ||
+          e.new.id != S.user.suuid ||
+          e.new.status != "suspended"
+        )
+          return;
+        out();
+        T("تم إيقاف حساب محلك من الإدارة");
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "support_messages" },
+      async (e) => {
+        if (e.new.customer_id != S.user.aid || e.new.sender != "admin") return;
+        await myMsgs();
+        T("وصلك رد من الدعم الفني");
+        if (S.view == "my") render();
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "orders" },
+      async (e) => {
+        const r = e.new || {};
+        if (S.user.k != "s" || r.store_id != S.user.suuid) return;
+        await storeOrders();
+        if (e.eventType == "INSERT") T("وصل طلب جديد");
+        render();
+      },
+    )
+    .subscribe();
+}
+async function sendOrders(its, x) {
+  const {
+    data: { session },
+  } = await SBC.auth.getSession();
+  if (!session) {
+    T("سجّل الدخول من جديد لإتمام الطلب");
+    go("login");
+    return false;
+  }
+  const grp = {};
+  its.forEach((i) => (grp[i.s] = grp[i.s] || []).push(i));
+  const addr = [S.user.dr, S.user.st, S.user.ds].filter(Boolean).join(" - ");
+  let first = true;
+  for (const gi of Object.values(grp)) {
+    const sb = gi.reduce((a, i) => a + i.p * i.q, 0),
+      sr = S.ss.find((z) => z.id == gi[0].s);
+    const { data: o, error } = await SBC.from("orders")
+      .insert({
+        customer_id: S.user.aid,
+        store_id: (sr && sr.uuid) || null,
+        status: "new",
+        total: sb + (first ? x.fee - x.disc : 0),
+        fee: first ? x.fee : 0,
+        disc: first ? x.disc : 0,
+        pay: x.pay,
+        phone: S.user.ph,
+        cname: S.user.nm,
+        address: addr,
+        location: S.user.loc || null,
+      })
+      .select()
+      .single();
+    if (error) {
+      T("تعذّر إرسال الطلب: " + error.message);
+      return false;
+    }
+    const rows = gi.map((i) => ({
+      order_id: o.id,
+      product_id: (S.ps.find((z) => z.id == i.id) || {}).uuid || null,
+      name: i.n,
+      price: i.p,
+      qty: i.q,
+    }));
+    const r2 = await SBC.from("order_items").insert(rows);
+    if (r2.error) {
+      T("تعذّر حفظ تفاصيل الطلب: " + r2.error.message);
+      return false;
+    }
+    first = false;
+  }
+  await myOrders();
+  return true;
+}
+const _dash = V.dash;
+V.dash = () => {
+  const h = _dash();
+  if (S.role != "store") return h;
+  const m = S.msgs || [],
+    nw = m.length && m[m.length - 1].sender == "admin";
+  return (
+    `<div class="card row"><span>🎧 الدعم الفني${nw ? ' <b class="tg">رد جديد</b>' : ""}<small class="mu" style="display:block">راسل الإدارة واستقبل ردودها</small></span><button class="b s" style="width:auto" onclick="go('my','support')">مراسلة الدعم</button></div>` +
+    h
+  );
+};
 render();
 loadCatalog();
+(async () => {
+  const {
+    data: { session },
+  } = await SBC.auth.getSession();
+  if (session) {
+    if (await loadMe(session.user.id)) {
+      await myMsgs();
+      render();
+    }
+  } else if (!session && (S.role == "customer" || S.role == "store")) {
+    S.role = "guest";
+    S.user = {};
+    render();
+  }
+})();
